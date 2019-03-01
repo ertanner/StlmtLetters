@@ -1,0 +1,20 @@
+{
+  "99": {
+    "ID": "99",
+    "DocsNeeded": ["DeliveryReciept", "NMFTA", "110Tariff", "BOL"],
+    "Trigger": "list-true",
+    "From": "etanner.DYLT.com",
+    "CC": "etanner.DYLT.com",
+    "To": "Contact Email",
+    "Subject": "Settlement Letter, ClaimID <?> for Pro <?>"
+  },
+  "100": {
+    "ID": "100",
+    "DocsNeeded": ["DeliveryReciept", "NMFTA", "110Tariff", "BOL"],
+    "Trigger": "list-true",
+    "From": "etanner.DYLT.com",
+    "CC": "etanner.DYLT.com",
+    "To": "Contact Email",
+    "Subject": "Settlement Letter, ClaimID <?> for Pro <?>"
+  }
+}
