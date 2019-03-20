@@ -42,11 +42,13 @@ type Claim struct {
 	User3            string
 	Contact_name     string
 	Claimant_email   string
+	Claim_Date       time.Time
 	Assigned_to      string
 	Item_descr       string
 	Item_is_required string
 	POD_Signed       string
-	POD_Date         string
+	POD_Date         time.Time
+	DaysDiff         int
 	Note             string
 	Multiple         int
 }
@@ -72,9 +74,13 @@ type State struct {
 	User3            string
 	Contact_name     string
 	Claimant_email   string
+	Claim_Date       time.Time
 	Assigned_to      string
 	Item_descr       string
 	Item_is_required string
+	POD_Signed       string
+	POD_Date         time.Time
+	DaysDiff         int
 	Note             string
 	Multiple         string
 	State            string
@@ -177,7 +183,6 @@ func main() {
 		log.Println("Got Claims")
 
 		for j := 0; j < len(Clm); j++ {
-
 			log.Println("Get Notes")
 			GetNote(strconv.Itoa(Clm[j].Detail_line_id))
 
@@ -187,14 +192,25 @@ func main() {
 
 			GetFilesLoc(Clm[j].Bill_number)
 			log.Println("Got Files")
-			log.Println(Clm[j].LcId, strconv.Itoa(Mc[i].Id), Mc[i].Email_from, Mc[i].Email_to, strconv.Itoa(Clm[j].Detail_line_id), strconv.Itoa(Clm[j].Claim_id),
-				Clm[j].Bill_number, Clm[j].Contact_name, Clm[j].Assigned_to, Clm[j].Note, strconv.Itoa(Clm[j].Multiple))
-			// send email
+
+			// get notes
 			if Mc[i].Id == 101 || Mc[i].Id == 146 {
 				Clm[j].Note = formatNote(i, Mc[i].Id)
 			}
+
+			// calc days diff.
+			if Mc[i].Id == 101 {
+				log.Println("Start Date: " + Clm[j].POD_Date.String() + "  End Date: " + Clm[j].Claim_Date.String())
+				diffDay := businessDays(Clm[j].POD_Date, Clm[j].Claim_Date)
+				log.Println(" Days difference: " + strconv.Itoa(diffDay))
+			}
+
+			log.Println(Clm[j].LcId, strconv.Itoa(Mc[i].Id), Mc[i].Email_from, Mc[i].Email_to, strconv.Itoa(Clm[j].Detail_line_id), strconv.Itoa(Clm[j].Claim_id),
+				Clm[j].Bill_number, Clm[j].Contact_name, Clm[j].Assigned_to, Clm[j].Note, Clm[j].POD_Signed, Clm[j].POD_Date, Clm[j].DaysDiff, strconv.Itoa(Clm[j].Multiple))
+
+			// send email
 			sendEmail(strconv.Itoa(Mc[i].Id), Mc[i].Email_from, Mc[i].Email_to, strconv.Itoa(Clm[j].Detail_line_id),
-				strconv.Itoa(Clm[j].Claim_id), Clm[j].Bill_number, Clm[j].Contact_name, Clm[j].Assigned_to, Clm[j].Note, Clm[j].Multiple)
+				strconv.Itoa(Clm[j].Claim_id), Clm[j].Bill_number, Clm[j].Contact_name, Clm[j].Assigned_to, Clm[j].Note, Clm[j].Multiple, Clm[j].DaysDiff)
 			LocalFile = LocalFile[:0]
 		}
 		// reset Claim slice back to 0 elements
@@ -237,11 +253,13 @@ func GetClaims(listId string) {
 	// fetch mail config data from database
 	stmt := `select lc.List_id, C.CLAIM_ID,
     t.DETAIL_LINE_ID, t.BILL_NUMBER, 
-    C.CLAIM_STATUS, C.user3, c.CONTACT_NAME, c.CLAIMANT_EMAIL,
+    C.CLAIM_STATUS, C.user3, c.CONTACT_NAME, c.CLAIMANT_EMAIL, c.CLAIM_DATE,
     coalesce(LC.ASSIGNED_TO, 'nil'), 
     coalesce(LI.ITEM_DESCR, 'nil'), 
-    coalesce(LI.ITEM_IS_REQUIRED, 'nil'),
-	count(sl.ID) Multiple
+    coalesce(LI.ITEM_IS_REQUIRED, 'nil'), 
+	coalesce(d.POD_SIGNED_BY, 'nil'), 
+	coalesce(d.POD_SIGNED_ON, '01/01/2000'),
+	count(sl.ID) as Multiple
 	from CLAIM C 
 	join LIST_CHECKIN LC on lc.LIST_CODE = c.CLAIM_ID
 	join LIST_ITEM LI on lc.LIST_ID = li.ITEM_ID
@@ -253,8 +271,8 @@ func GetClaims(listId string) {
 	  and lc.List_id = ` + listId + ` 
 	and C.CLAIM_STATUS in ('CLOSED', 'OPEN')
 	and lc.IS_COMPLETE = 'True'
-	group by lc.List_id, C.CLAIM_ID, t.DETAIL_LINE_ID, t.BILL_NUMBER,C.CLAIM_STATUS, C.user3, c.CONTACT_NAME, c.CLAIMANT_EMAIL,
-	coalesce(LC.ASSIGNED_TO, 'nil'), coalesce(LI.ITEM_DESCR, 'nil'), coalesce(LI.ITEM_IS_REQUIRED, 'nil')
+	group by lc.List_id, C.CLAIM_ID, t.DETAIL_LINE_ID, t.BILL_NUMBER,C.CLAIM_STATUS, C.user3, c.CONTACT_NAME, c.CLAIMANT_EMAIL, c.CLAIM_DATE,
+	coalesce(LC.ASSIGNED_TO, 'nil'), coalesce(LI.ITEM_DESCR, 'nil'), coalesce(LI.ITEM_IS_REQUIRED, 'nil'), d.POD_SIGNED_BY, d.POD_SIGNED_ON
 	with ur`
 
 	rows, err := TmwDb.Query(stmt)
@@ -265,7 +283,7 @@ func GetClaims(listId string) {
 	for rows.Next() {
 		claim := new(Claim)
 		err := rows.Scan(&claim.LcId, &claim.Claim_id, &claim.Detail_line_id, &claim.Bill_number, &claim.Claim_status,
-			&claim.User3, &claim.Contact_name, &claim.Claimant_email, &claim.Assigned_to, &claim.Item_descr, &claim.Item_is_required,
+			&claim.User3, &claim.Contact_name, &claim.Claimant_email, &claim.Claim_Date, &claim.Assigned_to, &claim.Item_descr, &claim.Item_is_required, &claim.POD_Signed, &claim.POD_Date,
 			&claim.Multiple)
 		if err != nil {
 			log.Fatal(err)
@@ -297,7 +315,7 @@ func GetNote(dlid string) {
 				log.Fatal(err)
 			}
 			Clm[i].Note = claim.Note
-			log.Println(claim.Note)
+			//log.Println(claim.Note)
 		}
 		err = rows.Err()
 		if err != nil {
@@ -437,10 +455,10 @@ func ParseDocs(docsNeeded string) {
 			log.Println(err)
 		}
 	}
-	log.Println(DocsNeeded)
+	//log.Println(DocsNeeded)
 }
 
-func sendEmail(id, fromEmail, toEmail, dlid, claimID, billNo, contact, assignedTo, note string, multiple int) {
+func sendEmail(id, fromEmail, toEmail, dlid, claimID, billNo, contact, assignedTo, note string, multiple int, daydiff int) {
 
 	d := gomail.NewDialer("DLEXCH01.daylight.ads", 587, "etanner", Conf.MailPwd)
 
@@ -575,8 +593,23 @@ func sendMailStatus() {
 	}
 
 }
-func businessDays(start string, end string) {
-	//
+func businessDays(from time.Time, to time.Time) int {
+	//start format is '01/06/2019'
+	//date := 0
+	log.Println("start date ") // + start)
+	log.Println("end date ")   // + end)
+
+	totalDays := float32(to.Sub(from) / (24 * time.Hour))
+	weekDays := float32(from.Weekday()) - float32(to.Weekday())
+	businessDays := int(1 + (totalDays*5-weekDays*2)/7)
+	if to.Weekday() == time.Saturday {
+		businessDays--
+	}
+	if from.Weekday() == time.Sunday {
+		businessDays--
+	}
+
+	return businessDays
 }
 func LoadConfiguration(file string) Config {
 	var config Config

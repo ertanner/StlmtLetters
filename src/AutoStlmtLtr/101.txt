@@ -1,5 +1,6 @@
-101 text
-goes
+Your claim has been given our careful attention, and its investigation has been completed.
+Please note that the shipment was delivered without exception. A copy of the delivery receipt
+is included with this letter. This is considered evidence that the goods were delivered in the
+same condition as received.
+As a result of clear delivery, this claim must be respectfully declined.
 
-here
- thx
