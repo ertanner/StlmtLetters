@@ -1,3 +1,14 @@
+<name>
+<company>
+<address>
+<city>, <state> <zip>
+
+Your Claim #:   <your_claim>
+Our Claim #:    <claim>
+Freight Bill #: <bill>
+Claim Ammount:  $<amount>
+Shipment Dated: <date_shipped>
+
 Your claim has been given our careful attention, and its investigation has been completed.
 
 A copy of the delivery receipt is included with this letter. Please note that the shipment was
@@ -9,7 +20,7 @@ that a carrier be notified within 5 business days of delivery of concealed damag
 of this timely notification, the claimant must provide reasonable proof that the damage was not
 incurred by the consignee after delivery of shipment by carrier.
 
-This shipment was delivered on 10/10/2018. This claim was received on 11/6/2018, some 20
+This shipment was delivered on <del_date>. This claim was received on <received_date>, some <day_dif>
 days after delivery, and proof of responsibility for the damage is not offered.
 
 As a result of this apparent clear delivery and the lack of timely notification of concealed
