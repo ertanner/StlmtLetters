@@ -1,14 +1,3 @@
-<name>
-<company>
-<address>
-<city>, <state> <zip>
-
-Your Claim #:   <your_claim>
-Our Claim #:    <claim>
-Freight Bill #: <bill>
-Claim Ammount:  $<amount>
-Shipment Dated: <date_shipped>
-
 Your claim has been given our careful attention, and its investigation has been completed.
 
 Please note that the shipment was delivered without exception. A copy of the delivery receipt
