@@ -1,0 +1,10 @@
+{
+  "SynUid": "sa",
+  "DB2dsn": "DYLT_PRJ",
+  "SynDbDsn": "SYNERGIZE",
+  "HostMail": "DLEXCH01.daylight.ads",
+  "MailUid": "etanner",
+  "MailPort": 587,
+  "PdfUrl":  "https://api.dylt.com/image/",
+  "PdfUid": "AUTORGH"
+}
